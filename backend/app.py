@@ -27,7 +27,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 APP_TITLE = "Warehouse Wave Picking (6 kutija)"
-ROUTING_XLSX = os.path.join(os.path.dirname(__file__), "MAG_ROUTING_DATA_v2.xlsx")
+_BASE_DIR = os.path.dirname(__file__)
+_DEFAULT_XLSX = os.path.join(_BASE_DIR, "MAG_ROUTING_DATA_v2.xlsx")
+_DATA_XLSX = os.path.normpath(os.path.join(_BASE_DIR, "..", "data", "sample.xlsx"))
+ROUTING_XLSX = _DEFAULT_XLSX if os.path.exists(_DEFAULT_XLSX) else _DATA_XLSX
 SESSION_DB = os.path.join(os.path.dirname(__file__), "wave_sessions.json")
 
 app = FastAPI(title=APP_TITLE)

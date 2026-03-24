@@ -1,5 +1,8 @@
 ﻿// Bootstrap / exports
 window.addEventListener("load", () => {
+  if (typeof initApiBase === "function") {
+    initApiBase();
+  }
   if (typeof loadSession === "function") {
     loadSession();
   }
