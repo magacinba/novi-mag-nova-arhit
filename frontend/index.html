@@ -813,12 +813,10 @@
         const params = new URLSearchParams(window.location.search);
         const API =
             params.get("api") ||
-            localStorage.getItem("api") ||
             localStorage.getItem("api_base") ||
             "http://127.0.0.1:8000";
 
         if (params.get("api")) {
-            localStorage.setItem("api", params.get("api"));
             localStorage.setItem("api_base", params.get("api"));
         }
         let SESSION_ID = null;
