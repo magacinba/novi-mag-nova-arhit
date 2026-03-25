@@ -1,4 +1,4 @@
-﻿// Global config/state
+// Global config/state
 // First entry is the default API base for local dev.
 const API_LIST = [
   "http://127.0.0.1:8000",
@@ -10,6 +10,7 @@ function setApiBase(url, persist = true) {
   API = url || "";
   if (persist) {
     try {
+      localStorage.setItem("api", API);
       localStorage.setItem("api_base", API);
     } catch {}
   }
@@ -26,7 +27,7 @@ function initApiBase() {
   } catch {}
 
   try {
-    const fromStorage = localStorage.getItem("api_base");
+    const fromStorage = localStorage.getItem("api") || localStorage.getItem("api_base");
     if (fromStorage) {
       API = fromStorage;
       return;
