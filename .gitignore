@@ -5,3 +5,6 @@ wave_sessions.json
 backup-*/
 backup-*.zip
 .venv/
+# Local run artifacts
+online-url.txt
+srattovanje.txt

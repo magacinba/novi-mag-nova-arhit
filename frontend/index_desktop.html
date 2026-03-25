@@ -1,0 +1,212 @@
+﻿<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Picking &#8226; 6 kutija na kolicima</title>
+    <link rel="manifest" href="./manifest.json">
+    <!-- SheetJS za Excel import -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <h2> Wave Picking &#8226; 6 kutija na kolicima</h2>
+
+    <!-- Sekcija za skeniranje i Excel upload -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div class="big">&#x1F50D; Skeniraj fakture (max 6)</div>
+            <div class="badge badge-blue" id="scanCounter">0/6</div>
+        </div>
+        
+        <input type="text" id="barcodeInput" class="scan-input" placeholder="Skeniraj barkod fakture..." autofocus>
+        
+        <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:15px;" id="scannedInvoices"></div>
+        
+        <!-- INFO O ULAZIMA/IZLAZIMA I NAINU RUTIRANJA -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+            <div style="padding:12px; background:#f1f5f9; border-radius:8px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px">
+                   <span style="font-weight:600">&#x1F6AA; Ulazi/Izlazi:</span>
+                </div>
+                <div style="display:flex; gap:16px; flex-wrap:wrap">
+                    <div><span class="badge badge-blue">ENTRANCE_1</span> Levo</div>
+                    <div><span class="badge badge-blue">ENTRANCE_2</span> Desno</div>
+                </div>
+            </div>
+            
+            <div style="padding:12px; background:#f1f5f9; border-radius:8px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px">
+                    <span style="font-weight:600">&#x1F5FA;&#xFE0F; Na&#269;in rutiranja:</span>
+                </div>
+                <select id="routingMode" style="padding:10px; width:100%; border-radius:8px; border:2px solid var(--border); background:white; font-weight:500">
+                    <option value="optimal" selected>&#x26A1; Optimalno (najkra&#263;a putanja)</option>
+                    <option value="ortools">&#x1F9E0; Najkra&#263;a (OR-Tools, sporije)</option>
+                    <option value="sector">&#x1F4CD; Po sektorima (A&rarr;B&rarr;C&rarr;D&rarr;E)</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- EXCEL UPLOAD -->
+        <div style="margin-top:20px; padding:15px; background:#f8fafc; border-radius:12px; border:2px dashed var(--border)">
+            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:24px;">&#x1F4CA;</span>
+                    <span style="font-weight:600;">Uitaj fakture iz Excel-a:</span>
+                </div>
+                
+                <input type="file" id="excelUpload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this)">
+                
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" onclick="document.getElementById('excelUpload').click()" style="background:var(--primary); color:white;">
+                       &#x1F4C2; Izaberi fajl
+                    </button>
+                    <button class="btn" onclick="downloadSampleExcel()" style="background:#8b5cf6; color:white;">
+                        &#x1F4E5; Uzorak fajla
+                    </button>
+                </div>
+                
+                <span id="uploadStatus" class="muted" style="font-size:13px;"></span>
+            </div>
+            
+            <div class="muted" style="margin-top:10px; font-size:12px;">
+                 &#x1F4CC; Format: kolone <b>broj fak, lokacija, sku, kolicina</b> (bilo koji redosled)
+            </div>
+        </div>
+        
+        <div style="display:flex; gap:10px; align-items:center; margin-top:15px;">
+            <button class="btn btn-primary" id="startWaveBtn" onclick="startWave()" disabled style="font-size:18px; padding:15px 30px;">
+                &#x1F680; KRE&#262;EMO SA PAKOVANJEM
+            </button>
+            <button class="btn" onclick="clearScanned()"> Obrii sve</button>
+            <button class="btn" onclick="debugWave()">&#x1F41E; Debug</button>
+			<button class="btn" onclick="showMap()">&#x1F5FA;&#xFE0F; Mapa</button>
+        </div>
+    </div>
+
+    <div id="loadingIndicator" style="display:none; text-align:center; padding:20px">
+        <div class="spinner" style="width:32px; height:32px;"></div>
+        <div style="margin-top:8px">Uitavanje...</div>
+    </div>
+
+    <!-- Glavni grid - pojavljuje se nakon starta -->
+    <div class="mainGrid" id="mainGrid" style="display:none;">
+        <!-- Leva strana - Pickovanje -->
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:15px;">
+                    <div class="big">&#x1F4CD; Trenutna lokacija: <span id="curLoc" style="color:var(--primary);">-</span></div>
+                    <div id="currentBoxInfo" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"></div>
+                </div>
+                <div class="pill" id="progressPill">0/0</div>
+            </div>
+
+            <!--  NOVI PANEL ZA PRIKAZ LOKACIJE I ARTIKALA  -->
+            <div style="background:#f8fafc; border-radius:12px; padding:20px; margin-bottom:20px; border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; text-align:center; font-size:16px;">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="color:#64748b; font-size:14px; margin-bottom:5px;">LOKACIJA</span>
+                        <span style="font-weight:700; font-size:24px; color:var(--primary);" id="curLocBig">-</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="color:#64748b; font-size:14px; margin-bottom:5px;">SIFRA</span>
+                        <span style="font-weight:700; font-size:24px; font-family:monospace;" id="curSku">-</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="color:#64748b; font-size:14px; margin-bottom:5px;">KOLIINA</span>
+                        <span style="font-weight:700; font-size:24px; color:var(--success);" id="curQty">-</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="color:#64748b; font-size:14px; margin-bottom:5px;">FAKTURA</span>
+                        <span style="font-weight:700; font-size:18px; background:#e2e8f0; padding:5px 10px; border-radius:20px;" id="curInvoice">-</span>
+                    </div>
+                </div>
+                
+                <!-- VELIKA DUGMAD ZA AKCIJU -->
+                <div style="display:flex; justify-content:center; gap:15px; margin-top:20px;">
+                    <button class="btn btn-success" style="flex:1; padding:15px; font-size:18px; font-weight:600;" onclick="takeCurrentItem()">
+                         UZETO
+                    </button>
+                    <button class="btn btn-warning" style="flex:1; padding:15px; font-size:18px; font-weight:600;" onclick="oosCurrentItem()">
+                         NEMA
+                    </button>
+                    <button class="btn btn-danger" style="flex:1; padding:15px; font-size:18px; font-weight:600;" onclick="problemCurrentItem()">
+                         PROBLEM
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top:4px; display:flex; justify-content:space-between;">
+                <span class="muted" id="routeInfo"></span>
+                <span id="progressPercent" style="font-weight:600; color:var(--success)">0%</span>
+            </div>
+
+            <div style="margin-top:16px; max-height:500px; overflow-y:auto; border-radius:12px; border:1px solid var(--border)">
+                <table id="itemsTable">
+                    <thead style="background:#f8fafc; position:sticky; top:0">
+                        <tr>
+                            <th>&#x1F4E6; SKU</th>
+                            <th>&#x1F4CA; Kol</th>
+                            <th>&#x1F4CB; Faktura</th>
+                            <th>&#x1F4E6; Kutija</th>
+                            <th>&#x1F516; Status</th>
+                            <th>&#x1F3AF; Akcija</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Desna strana -&#x1F516; Status kutija i statistika -->
+        <div class="card">
+            <!-- STATISTIKA DEO -->
+            <div style="margin-bottom:20px; padding:15px; background:#f8fafc; border-radius:12px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div class="big" style="font-size:18px;">&#x1F4CA; Statistika</div>
+                    <span class="badge badge-blue" id="timerDisplay">00:00</span>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="padding:8px; background:white; border-radius:8px;">
+                        <div style="font-size:12px; color:var(--dark);">&#x1F4E6; Artikli/sat</div>
+                        <div style="font-size:18px; font-weight:700;" id="itemsPerHour">0</div>
+                    </div>
+                    <div style="padding:8px; background:white; border-radius:8px;">
+                        <div style="font-size:12px; color:var(--dark);">&#x23F1;&#xFE0F; Vreme po lok.</div>
+                        <div style="font-size:18px; font-weight:700;" id="avgTimePerLoc">0s</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top:8px; padding:8px; background:white; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="font-size:12px; color:var(--dark);"> Preeno:</span>
+                        <span style="font-weight:600;" id="totalDistanceStat">0 m</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <div class="big">&#x1F4E6; Kutije na kolicima</div>
+                <div class="badge badge-blue" id="totalDistanceDisplay">- m</div>
+            </div>
+            <div id="boxesContainer" class="boxes-grid">
+                <!-- OVDE IDE 6 KUTIJA -->
+            </div>
+            
+            <div style="margin-top:20px;">
+                <div class="big" style="font-size:18px;">&#x1F4CB; Izve&#353;taj</div>
+                <div id="reportMini" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    
+    <script src="./js/config.js"></script>
+    <script src="./js/storage.js"></script>
+    <script src="./js/api.js"></script>
+    <script src="./js/ui.js"></script>
+    <script src="./js/navigation.js"></script>
+    <script src="./js/picking.js"></script>
+    <script src="./js/app.js"></script></body>
+</html>
