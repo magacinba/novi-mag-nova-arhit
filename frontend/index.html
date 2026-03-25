@@ -804,6 +804,7 @@
         }
     </script>
 
+    <script src="js/errors.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/wave.js"></script>
 
@@ -827,19 +828,6 @@
         let finalElapsedSeconds = null; // â­ ÄŚuva konaÄŤno vreme kada se wave zavrĹˇi
         let isOnline = navigator.onLine;
 
-        // ==================== CENTRAL ERROR HANDLER ====================
-        async function safeFetch(url, options = {}) {
-            try {
-                const res = await fetch(url, options);
-                let data = null;
-                try { data = await res.json(); } catch {}
-                return data;
-            } catch (err) {
-                console.error(err);
-                alert("GreĹˇka konekcije sa serverom");
-                return null;
-            }
-        }
         
         // ==================== BOJE ZA KUTIJE ====================
         function getBoxColor(box) {
@@ -1591,6 +1579,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
