@@ -32,3 +32,13 @@ Otvori:
 ## Napomena o API bazi
 Podrazumevano je `http://127.0.0.1:8000`. Možeš ručno promeniti u:
 `frontend/js/config.js`
+
+## Brzi online start (Cloudflare Tunnel)
+Pokreni:
+`C:\Users\ThinkCentre Win10\Desktop\CODEX\novi mag nov arh\start-backend-tunnel.cmd`
+
+Skripta automatski:
+- startuje backend
+- startuje tunnel
+- otvara online URL
+- snimi URL u `online-url.txt`

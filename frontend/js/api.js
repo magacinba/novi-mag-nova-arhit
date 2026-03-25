@@ -3,27 +3,35 @@ function apiUrl(path) {
   return `${API}${path}`;
 }
 
-async function apiGet(path) {
-  return fetch(apiUrl(path));
+function showApiError(message) {
+  console.error(message);
+  alert("Greška konekcije sa serverom");
+}
+
+async function safeFetchJson(path, options = {}) {
+  try {
+    const res = await fetch(apiUrl(path), options);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+    return { res, data, error: null };
+  } catch (err) {
+    showApiError(err);
+    return { res: null, data: null, error: err };
+  }
 }
 
 async function apiGetJson(path) {
-  const res = await apiGet(path);
-  const data = await res.json();
-  return { res, data };
+  return safeFetchJson(path, { method: "GET" });
 }
 
 async function apiPostJson(path, body) {
-  const res = await fetch(apiUrl(path), {
+  return safeFetchJson(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
-  }
-  return { res, data };
 }

@@ -6,11 +6,21 @@ window.addEventListener("load", () => {
   if (typeof loadSession === "function") {
     loadSession();
   }
+  if (typeof initScanner === "function") {
+    initScanner();
+  }
   if (SESSION_ID) {
     refreshWave().catch(err => console.error(err));
   }
 });
 
+window.addEventListener("beforeunload", () => {
+  if (typeof saveSession === "function") {
+    saveSession();
+  }
+});
+
+// Global exports for inline handlers
 window.removeInvoice = removeInvoice;
 window.clearScanned = clearScanned;
 window.startWave = startWave;
