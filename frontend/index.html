@@ -19,6 +19,9 @@
     <!-- SheetJS za Excel import -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     
+    <!-- HTML5 QR Code biblioteka za skeniranje kamerom -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
     <style>
         /* Reset i osnovni stilovi */
         :root {
@@ -235,6 +238,57 @@
         .scan-button:active {
             background: var(--primary-dark);
             transform: scale(0.98);
+        }
+        
+        /* Kamera modal */
+        .camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .camera-container {
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        #qr-reader {
+            width: 100%;
+            background: #000;
+        }
+        
+        .camera-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 2001;
+            border: none;
+        }
+        
+        .camera-close:active {
+            background: rgba(0,0,0,0.9);
         }
         
         /* Fakture pilule */
@@ -592,6 +646,14 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
     </div>
+    
+    <!-- Camera Modal za skeniranje -->
+    <div id="cameraModal" class="camera-modal">
+        <button class="camera-close" onclick="closeCamera()">✕</button>
+        <div class="camera-container">
+            <div id="qr-reader"></div>
+        </div>
+    </div>
 
     <!-- Glavni kontejner -->
     <div class="mobile-container">
@@ -613,7 +675,7 @@
             
             <input type="text" id="barcodeInput" class="scan-input" placeholder="Barkod fakture..." autofocus>
             
-            <button class="scan-button" onclick="simulateScan()">
+            <button class="scan-button" onclick="openCamera()">
                 <span>📷</span> Skeniraj kamerom
             </button>
             
@@ -813,8 +875,88 @@
         let waveData = null;
         let waveStartTime = null;
         let timerInterval = null;
-        let finalElapsedSeconds = null; // ⭐ Čuva konačno vreme kada se wave završi
+        let finalElapsedSeconds = null;
         let isOnline = navigator.onLine;
+        let html5QrCode = null;
+        
+        // ==================== KAMERA FUNKCIJE ====================
+        async function openCamera() {
+            const cameraModal = document.getElementById('cameraModal');
+            cameraModal.style.display = 'flex';
+            
+            // Pokušaj da zaustaviš postojeći skener ako postoji
+            if (html5QrCode && html5QrCode.isScanning) {
+                try {
+                    await html5QrCode.stop();
+                } catch(e) {
+                    console.log('Greška pri zaustavljanju skenera:', e);
+                }
+            }
+            
+            // Kreiraj novi skener
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+            
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" }, // zadnja kamera
+                    config,
+                    (decodedText) => {
+                        // Uspešno skeniranje
+                        handleScannedCode(decodedText);
+                        closeCamera();
+                    },
+                    (errorMessage) => {
+                        // Greška pri skeniranju - ignoriši, samo loguj
+                        // console.log(errorMessage);
+                    }
+                );
+            } catch (err) {
+                console.error('Greška pri pokretanju kamere:', err);
+                alert('Nije moguće pristupiti kameri. Proverite dozvole.');
+                closeCamera();
+            }
+        }
+        
+        function closeCamera() {
+            const cameraModal = document.getElementById('cameraModal');
+            cameraModal.style.display = 'none';
+            
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(e => console.log('Greška pri gašenju kamere:', e));
+            }
+        }
+        
+        function handleScannedCode(code) {
+            console.log('Skenirano:', code);
+            
+            // Očisti kod od mogućih whitespace karaktera
+            const cleanedCode = code.trim();
+            
+            // Proveri da li je skenirana faktura (može biti broj ili tekst)
+            if (cleanedCode && scannedInvoices.length < 6) {
+                if (!scannedInvoices.includes(cleanedCode)) {
+                    scannedInvoices.push(cleanedCode);
+                    updateScannedList();
+                    document.getElementById('startWaveBtn').disabled = false;
+                    
+                    // Kratka vibracija ako je dostupna (samo na mobilnim uređajima)
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100);
+                    }
+                } else {
+                    alert('📋 Faktura već skenirana!');
+                    if (navigator.vibrate) navigator.vibrate(200);
+                }
+            } else if (scannedInvoices.length >= 6) {
+                alert('Maksimalan broj faktura (6) je već skeniran!');
+            }
+        }
         
         // ==================== BOJE ZA KUTIJE ====================
         function getBoxColor(box) {
@@ -863,15 +1005,7 @@
         });
         
         function simulateScan() {
-            if ('BarcodeDetector' in window) {
-                alert('Kamera nije dostupna u ovoj verziji. Koristite ručni unos.');
-            } else {
-                const fakeBarcode = prompt('Unesite barkod fakture:');
-                if (fakeBarcode) {
-                    document.getElementById('barcodeInput').value = fakeBarcode;
-                    document.getElementById('barcodeInput').dispatchEvent(new Event('keypress', {key: 'Enter'}));
-                }
-            }
+            openCamera();
         }
         
         function updateScannedList() {
@@ -1036,7 +1170,7 @@
                 
                 SESSION_ID = data.session_id;
                 waveData = data;
-                finalElapsedSeconds = null; // Resetuj konačno vreme
+                finalElapsedSeconds = null;
                 
                 localStorage.setItem('session_id', SESSION_ID);
                 localStorage.setItem('waveData', JSON.stringify(data));
@@ -1062,7 +1196,6 @@
         function renderWave(data) {
             waveData = data;
             
-            // Provera kraja
             const isFinished = !data.current_location || data.current_location === '' || data.current_location === 'KRAJ';
             
             if (isFinished) {
@@ -1086,14 +1219,12 @@
             
             updateBoxesProgress();
             
-            // Ažuriraj izveštaj ako je prikazan
             if (document.getElementById('reportsSection').style.display === 'block') {
                 loadReportData();
             }
         }
         
         function updateCurrentItem() {
-            // Provera za kraj
             if (!waveData || !waveData.current_location || waveData.current_location === '' || waveData.current_location === 'KRAJ') {
                 document.getElementById('curSku').textContent = '-';
                 document.getElementById('curQty').textContent = '-';
@@ -1120,7 +1251,6 @@
         }
         
         function updateLocationItems() {
-            // Provera za kraj
             if (!waveData || !waveData.current_location || waveData.current_location === '' || waveData.current_location === 'KRAJ') {
                 const container = document.getElementById('locationItems');
                 if (container) container.innerHTML = '<div style="text-align:center; padding:20px;">🎉 Wave završen!</div>';
@@ -1287,7 +1417,7 @@
             
             timerInterval = setInterval(() => {
                 if (!waveStartTime) return;
-                if (finalElapsedSeconds !== null) return; // Ako je završeno, ne ažuriraj
+                if (finalElapsedSeconds !== null) return;
                 
                 const elapsed = Math.floor((Date.now() - waveStartTime) / 1000);
                 const minutes = Math.floor(elapsed / 60);
@@ -1295,7 +1425,6 @@
                 const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 document.getElementById('timerDisplay').textContent = timeStr;
                 
-                // Ažuriraj i izveštaj ako je otvoren
                 if (document.getElementById('reportsSection').style.display === 'block') {
                     document.getElementById('reportTotalTime').innerText = timeStr;
                 }
@@ -1304,15 +1433,12 @@
         
         function stopTimer() {
             if (timerInterval) {
-                // Sačuvaj konačno vreme
                 if (waveStartTime) {
                     finalElapsedSeconds = Math.floor((Date.now() - waveStartTime) / 1000);
                     const minutes = Math.floor(finalElapsedSeconds / 60);
                     const seconds = finalElapsedSeconds % 60;
                     const finalTimeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                     document.getElementById('timerDisplay').textContent = finalTimeStr;
-                    
-                    // Sačuvaj u localStorage za izveštaj
                     localStorage.setItem('finalWaveTime', finalTimeStr);
                     localStorage.setItem('finalWaveSeconds', finalElapsedSeconds);
                 }
@@ -1321,15 +1447,6 @@
             }
         }
         
-        // ==================== IZVESTAJI ====================
-        function showReports() {
-            const picking = document.getElementById('pickingSection');
-            const reports = document.getElementById('reportsSection');
-            if (picking) picking.style.display = 'none';
-            if (reports) reports.style.display = 'block';
-            loadReportData();
-        }
-
         // ==================== SEKCIJA ZA KUTIJE ====================
         function loadBoxesSection() {
             const container = document.getElementById('boxesSection');
@@ -1388,7 +1505,44 @@
             html += '</div>';
             container.innerHTML = html;
         }
-
+        
+        function showBoxDetails(boxNum) {
+            if (!waveData) {
+                alert('Nema aktivnog wave-a');
+                return;
+            }
+            
+            let invoice = null;
+            for (const [inv, box] of Object.entries(waveData.box_assignment || {})) {
+                if (box === boxNum) {
+                    invoice = inv;
+                    break;
+                }
+            }
+            
+            if (!invoice) {
+                alert(`Kutija ${boxNum} je prazna`);
+                return;
+            }
+            
+            const items = [];
+            for (const loc in waveData.items_by_loc) {
+                waveData.items_by_loc[loc].forEach(item => {
+                    if (item.invoice === invoice) {
+                        items.push({...item, location: loc});
+                    }
+                });
+            }
+            
+            let details = `📦 Kutija ${boxNum} - Faktura ${invoice}\n\n`;
+            items.forEach(item => {
+                const status = item.status === 'taken' ? '✓' : (item.status === 'problem' ? '⚠' : '○');
+                details += `${status} ${item.sku} - ${item.qty_picked || 0}/${item.qty_required}\n   Lokacija: ${item.location}\n`;
+            });
+            
+            alert(details);
+        }
+        
         // ==================== SEKCIJA ZA PODESAVANJA ====================
         function loadSettings() {
             const container = document.getElementById('settingsSection');
@@ -1435,14 +1589,13 @@
                 </div>
             `;
         }
-
-        // ==================== POMOĆNE FUNKCIJE ZA PODEŠAVANJA ====================
+        
         function saveApiUrl() {
             const newUrl = document.getElementById('apiUrl').value;
             localStorage.setItem('api_url', newUrl);
             alert('API URL sačuvan. Osveži stranicu da bi primenio promene.');
         }
-
+        
         function clearLocalData() {
             if (confirm('Obrisati sve lokalno sačuvane podatke?')) {
                 localStorage.clear();
@@ -1450,7 +1603,7 @@
                 alert('Podaci obrisani. Osveži stranicu.');
             }
         }
-
+        
         // ==================== SEKCIJA ZA IZVEŠTAJE ====================
         function loadReportData() {
             if (!waveData && !finalElapsedSeconds) {
@@ -1467,13 +1620,11 @@
             
             const stats = calculateStats(waveData);
             
-            // Ažuriraj KPI kartice
             document.getElementById('reportTotalItems').innerText = stats.totalItems;
             document.getElementById('reportTakenItems').innerText = stats.takenItems;
             document.getElementById('reportProblemItems').innerText = stats.problemItems;
             document.getElementById('reportDistance').innerText = stats.distance + ' m';
             
-            // ⭐ Vreme rada - koristi finalElapsedSeconds ako je wave završen
             let totalTimeStr = stats.totalTime;
             if (finalElapsedSeconds !== null) {
                 const minutes = Math.floor(finalElapsedSeconds / 60);
@@ -1483,7 +1634,6 @@
             document.getElementById('reportTotalTime').innerText = totalTimeStr;
             document.getElementById('reportItemsPerHour').innerText = stats.itemsPerHour;
             
-            // Ažuriraj prikaz po kutijama
             let boxesHtml = '';
             for (let i = 1; i <= 6; i++) {
                 let invoice = null;
@@ -1519,7 +1669,6 @@
             }
             document.getElementById('reportBoxes').innerHTML = boxesHtml;
             
-            // Ažuriraj problematične stavke
             const problems = [];
             if (waveData) {
                 for (const loc in waveData.items_by_loc) {
@@ -1548,7 +1697,7 @@
                 document.getElementById('reportProblems').innerHTML = problemsHtml;
             }
         }
-
+        
         // ==================== STATISTIKA ====================
         function calculateStats(data) {
             if (!data) {
@@ -1577,7 +1726,6 @@
                 });
             }
             
-            // Vreme rada
             let totalTime = '00:00';
             if (finalElapsedSeconds !== null) {
                 const minutes = Math.floor(finalElapsedSeconds / 60);
@@ -1602,7 +1750,7 @@
                 itemsPerHour
             };
         }
-
+        
         function exportReport() {
             if (!waveData) return;
             
@@ -1629,29 +1777,25 @@
             a.download = `wave-report-${new Date().toISOString().slice(0,10)}.csv`;
             a.click();
         }
-
+        
         // ==================== NAVIGACIJA ====================
         function showSection(section) {
             console.log('Navigacija na sekciju:', section);
             
-            // Ukloni active klasu sa svih navigacionih stavki
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
             
-            // Pronađi kliknuti element i dodaj mu active klasu
             const navItems = document.querySelectorAll('.nav-item');
             for (let i = 0; i < navItems.length; i++) {
                 const item = navItems[i];
                 const onclick = item.getAttribute('onclick') || '';
                 if (onclick.includes(section)) {
                     item.classList.add('active');
-                    console.log('Aktivirana stavka:', section);
                     break;
                 }
             }
             
-            // Sakrij sve sekcije
             const sections = ['scanSection', 'pickingSection', 'boxesSection', 'reportsSection', 'settingsSection'];
             sections.forEach(id => {
                 const el = document.getElementById(id);
@@ -1660,89 +1804,54 @@
                 }
             });
             
-            // Prikaži izabranu sekciju
             const selectedSection = document.getElementById(section + 'Section');
             if (selectedSection) {
                 selectedSection.style.display = 'block';
-                console.log('Prikazana sekcija:', section + 'Section');
             } else {
-                console.error('Sekcija ne postoji:', section + 'Section');
                 alert(`Sekcija "${section}" ne postoji!`);
                 return;
             }
             
-            // Učitaj podatke za pojedine sekcije
             try {
                 switch(section) {
                     case 'picking':
-                        console.log('Učitavam picking...');
-                        if (SESSION_ID) {
-                            refreshWave();
-                        } else {
-                            console.log('Nema aktivne sesije za picking');
-                        }
+                        if (SESSION_ID) refreshWave();
                         break;
-                        
                     case 'boxes':
-                        console.log('Učitavam kutije...');
-                        if (typeof loadBoxesSection === 'function') {
-                            loadBoxesSection();
-                        } else {
-                            console.error('❌ loadBoxesSection nije definisana!');
-                            document.getElementById('boxesSection').innerHTML = '<div style="padding:20px; text-align:center;">Greška: Funkcija za kutije nije dostupna</div>';
-                        }
+                        if (typeof loadBoxesSection === 'function') loadBoxesSection();
                         break;
-                        
                     case 'reports':
-                        console.log('Učitavam izveštaj...');
-                        if (typeof loadReportData === 'function') {
-                            loadReportData();
-                        } else {
-                            console.error('❌ loadReportData nije definisana!');
-                        }
+                        if (typeof loadReportData === 'function') loadReportData();
                         break;
-                        
                     case 'settings':
-                        console.log('Učitavam podešavanja...');
-                        if (typeof loadSettings === 'function') {
-                            loadSettings();
-                        } else {
-                            console.error('❌ loadSettings nije definisana!');
-                        }
+                        if (typeof loadSettings === 'function') loadSettings();
                         break;
                 }
             } catch (error) {
                 console.error('Greška pri učitavanju sekcije:', error);
-                alert('Došlo je do greške: ' + error.message);
             }
         }
-
+        
         // ==================== INIT ====================
         window.addEventListener('load', () => {
             console.log('Stranica učitana');
             
-            // Pročitaj sačuvano finalno vreme ako postoji
             const savedFinalTime = localStorage.getItem('finalWaveTime');
             if (savedFinalTime) {
                 document.getElementById('reportTotalTime').innerText = savedFinalTime;
             }
             
-            // Prvo prikaži scanSection (ekran za skeniranje)
             document.getElementById('scanSection').style.display = 'block';
             document.getElementById('pickingSection').style.display = 'none';
             
-            // Aktiviraj prvu navigacionu stavku
             const firstNavItem = document.querySelector('.nav-item');
             if (firstNavItem) {
-                // Ukloni active sa svih
                 document.querySelectorAll('.nav-item').forEach(item => {
                     item.classList.remove('active');
                 });
-                // Dodaj na prvu
                 firstNavItem.classList.add('active');
             }
             
-            // Proveri da li postoji sačuvana sesija
             const savedSession = localStorage.getItem('session_id');
             const savedWave = localStorage.getItem('waveData');
             
@@ -1772,14 +1881,14 @@
         window.exportReport = exportReport;
         window.saveApiUrl = saveApiUrl;
         window.clearLocalData = clearLocalData;
-        window.showBoxDetails = function(boxNum) {
-            alert(`Detalji kutije ${boxNum}`);
-        };
+        window.showBoxDetails = showBoxDetails;
         window.loadBoxesSection = loadBoxesSection;
         window.loadSettings = loadSettings;
         window.loadReportData = loadReportData;
         window.getBoxColor = getBoxColor;
         window.calculateStats = calculateStats;
+        window.openCamera = openCamera;
+        window.closeCamera = closeCamera;
     </script>
 </body>
 </html>
