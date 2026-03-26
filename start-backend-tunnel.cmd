@@ -6,7 +6,7 @@ if exist "%TUNNEL_LOG%" del "%TUNNEL_LOG%"
 
 set "ROOT_DIR=C:\Users\ThinkCentre Win10\Desktop\CODEX\novi mag nov arh"
 set "BACKEND_DIR=%ROOT_DIR%\backend"
-set "PAGE_BASE=https://magacinba.github.io/novi-mag-nova-arhit/index.html?api="
+set "PAGE_BASE=https://magacinba.github.io/novi-mag-nova-arhit/login.html?api="
 
 if not exist "%BACKEND_DIR%\.venv\Scripts\python.exe" (
   echo ERROR: Virtual env not found at %BACKEND_DIR%\.venv
@@ -22,7 +22,7 @@ if "%CLOUDFLARED%"=="" (
 )
 
 echo Starting backend (FastAPI)...
-start "Backend" cmd /k "cd /d %BACKEND_DIR% && .\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload"
+start "Backend" cmd /k "cd /d %BACKEND_DIR% && set AUTH_DISABLED=1 && .\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload"
 
 ping 127.0.0.1 -n 2 > nul
 
@@ -48,7 +48,7 @@ for /f "delims=" %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyM
 
 echo.
 echo Tunnel URL: !URL!
-set "FULL_URL=%PAGE_BASE%!URL!&t=%TS%"
+set "FULL_URL=%PAGE_BASE%!URL!&nol=1&t=%TS%"
 echo Opening: !FULL_URL!
 
 echo !FULL_URL!>"%ROOT_DIR%\online-url.txt"

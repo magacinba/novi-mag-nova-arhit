@@ -9,10 +9,29 @@ function showError(msg) {
     el.style.display = "block";
 }
 
+async function skipIfAuthed() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const nol = params.get("nol");
+        if (nol === "1") {
+            window.location.replace(buildRedirectUrl());
+            return true;
+        }
+        const res = await fetch(`${API}/auth/me`, { credentials: "include", cache: "no-store" });
+        if (res.ok) {
+            window.location.replace(buildRedirectUrl());
+            return true;
+        }
+    } catch {}
+    return false;
+}
+
 function buildRedirectUrl() {
     const params = new URLSearchParams(window.location.search);
     const api = params.get("api");
+    const nol = params.get("nol");
     if (api) {
+        if (nol) return `index.html?api=${encodeURIComponent(api)}&nol=${encodeURIComponent(nol)}`;
         return `index.html?api=${encodeURIComponent(api)}`;
     }
     return "index.html";
@@ -47,5 +66,6 @@ window.addEventListener("load", () => {
     initApiBase();
     const apiInput = document.getElementById("apiUrl");
     apiInput.value = API || "";
+    skipIfAuthed();
     document.getElementById("loginBtn").addEventListener("click", login);
 });

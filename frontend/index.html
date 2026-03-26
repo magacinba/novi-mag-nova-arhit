@@ -882,16 +882,21 @@
     <script>
         // ==================== KONFIGURACIJA ====================
         const API = "https://maga-codex.onrender.com";
-        const apiParam = new URLSearchParams(window.location.search).get("api");
+        const params = new URLSearchParams(window.location.search);
+        const apiParam = params.get("api");
+        const nol = params.get("nol");
         const authApi = apiParam || API;
 
         // Auth check: redirect to login if not authenticated
         (async function checkAuth() {
             try {
+                if (nol === "1") return;
                 const res = await fetch(`${authApi}/auth/me`, { credentials: "include" });
                 if (!res.ok) throw new Error("not-auth");
             } catch {
-                const redirect = apiParam ? `login.html?api=${encodeURIComponent(apiParam)}` : "login.html";
+                const redirect = apiParam
+                    ? `login.html?api=${encodeURIComponent(apiParam)}${nol ? `&nol=${encodeURIComponent(nol)}` : ""}`
+                    : "login.html";
                 window.location.replace(redirect);
             }
         })();
