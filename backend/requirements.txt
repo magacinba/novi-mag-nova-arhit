@@ -5,3 +5,4 @@ openpyxl==3.1.5
 pydantic==2.9.2
 python-multipart==0.0.20
 ortools==9.15.6755
+itsdangerous==2.2.0

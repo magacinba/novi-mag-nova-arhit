@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korisnici - Admin</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --gray: #64748b;
+            --gray-light: #e2e8f0;
+            --surface: #ffffff;
+            --bg: #f8fafc;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: #0f172a;
+            padding: 16px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .btn {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--gray-light);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid var(--gray-light);
+            font-size: 14px;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid var(--gray-light);
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+        .error {
+            color: var(--danger);
+            font-size: 13px;
+            margin: 8px 0;
+        }
+    </style>
+    <script src="js/config.js"></script>
+    <script src="js/users.js" defer></script>
+</head>
+<body>
+    <div class="header">
+        <h2>Korisnici</h2>
+        <button class="btn btn-danger" id="logoutBtn">Odjava</button>
+    </div>
+
+    <div class="card">
+        <div class="error" id="error" style="display:none;"></div>
+        <div class="row">
+            <input type="text" id="newUsername" placeholder="Korisničko ime">
+            <input type="password" id="newPassword" placeholder="Lozinka">
+            <select id="newRole">
+                <option value="worker">worker</option>
+                <option value="admin">admin</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" id="createBtn">Dodaj korisnika</button>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Korisnik</th>
+                    <th>Uloga</th>
+                    <th>Kreiran</th>
+                    <th>Akcije</th>
+                </tr>
+            </thead>
+            <tbody id="usersTable"></tbody>
+        </table>
+    </div>
+</body>
+</html>
