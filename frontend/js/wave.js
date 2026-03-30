@@ -10,7 +10,7 @@
                 if (saved) {
                     uploadedItems = JSON.parse(saved);
                 } else {
-                    alert('Nema uÄŤitanih stavki!');
+                    alert('Nema učitanih stavki!');
                     return;
                 }
             }
@@ -38,7 +38,7 @@
                 
                 SESSION_ID = data.session_id;
                 waveData = data;
-                finalElapsedSeconds = null; // Resetuj konaÄŤno vreme
+                finalElapsedSeconds = null; // Resetuj konačno vreme
                 
                 localStorage.setItem('session_id', SESSION_ID);
                 localStorage.setItem('waveData', JSON.stringify(data));
@@ -51,9 +51,9 @@
                 
             } catch (err) {
                 if (!navigator.onLine) {
-                    alert('Offline naÄŤin rada nije joĹˇ implementiran.');
+                    alert('Offline način rada nije još implementiran.');
                 } else {
-                    alert('GreĹˇka: ' + err.message);
+                    alert('Greška: ' + err.message);
                 }
             } finally {
                 setLoading(false);
@@ -113,7 +113,7 @@
                 if (!ok) return;
                 await refreshWave();
             } catch (err) {
-                alert('GreĹˇka: ' + err.message);
+                alert('Greška: ' + err.message);
             } finally {
                 setLoading(false);
             }
@@ -130,7 +130,7 @@
                 if (!ok) return;
                 await refreshWave();
             } catch (err) {
-                alert('GreĹˇka: ' + err.message);
+                alert('Greška: ' + err.message);
             } finally {
                 setLoading(false);
             }
@@ -147,7 +147,7 @@
                 if (!ok) return;
                 await refreshWave();
             } catch (err) {
-                alert('GreĹˇka: ' + err.message);
+                alert('Greška: ' + err.message);
             } finally {
                 setLoading(false);
             }
@@ -162,7 +162,7 @@
                 renderWave(data);
                 localStorage.setItem('waveData', JSON.stringify(data));
             } catch (err) {
-                console.log('Offline - koristim keĹˇirane podatke');
+                console.log('Offline - koristim keširane podatke');
                 const cached = localStorage.getItem('waveData');
                 if (cached) renderWave(JSON.parse(cached));
             }

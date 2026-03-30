@@ -24,7 +24,7 @@ function applyApiFromQuery() {
 
 async function apiFetch(path, options = {}) {
     const base = (typeof API !== "undefined" && API) ? API : "";
-    if (!base) throw new Error("API nije podeĹˇen");
+    if (!base) throw new Error("API nije podešen");
     const res = await fetch(`${base}${path}`, {
         credentials: "include",
         cache: "no-store",
