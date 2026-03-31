@@ -5,19 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wave Picking Mobile • 6 kutija</title>
 
-    <script>
-        // Cache-bust on load if ?t= is missing (helps GitHub Pages refresh)
-        (function () {
-            try {
-                const url = new URL(window.location.href);
-                if (!url.searchParams.has('t')) {
-                    url.searchParams.set('t', Date.now().toString());
-                    window.location.replace(url.toString());
-                }
-            } catch {}
-        })();
-    </script>
-    
     <!-- PWA Meta tagovi -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -1013,7 +1000,7 @@
                 localStorage.removeItem('scannedInvoices');
                 sessionStorage.clear();
             } catch {}
-            location.reload();
+            window.location.href = window.location.pathname + '?new_session=1';
         }
         
         // ==================== SEKCIJA ZA IZVEŠTAJE ====================

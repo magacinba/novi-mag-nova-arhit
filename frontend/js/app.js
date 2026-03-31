@@ -1,6 +1,20 @@
 ﻿// ==================== INIT ====================
+        let restoreChecked = false;
         window.addEventListener('load', () => {
+            if (restoreChecked) return;
+            restoreChecked = true;
             console.log('Stranica učitana');
+            
+            let skipRestore = false;
+            try {
+                const url = new URL(window.location.href);
+                if (url.searchParams.get('new_session') === '1') {
+                    skipRestore = true;
+                    url.searchParams.delete('new_session');
+                    const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '');
+                    window.history.replaceState({}, '', next);
+                }
+            } catch {}
             
             const savedFinalTime = localStorage.getItem('finalWaveTime');
             if (savedFinalTime) {
@@ -21,7 +35,7 @@
             const savedSession = localStorage.getItem('session_id');
             const savedWave = localStorage.getItem('waveData');
             
-            if (savedSession && savedWave) {
+            if (!skipRestore && savedSession && savedWave) {
                 setTimeout(() => {
                     if (confirm('Nastavi prethodnu sesiju?')) {
                         SESSION_ID = savedSession;
