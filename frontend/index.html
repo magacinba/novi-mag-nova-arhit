@@ -265,9 +265,12 @@
         (async function checkAuth() {
             try {
                 if (nol === "1") return;
+				const isNewSession = new URLSearchParams(window.location.search).get("new_session") === "1";
                 const res = await fetch(`${authApi}/auth/me`, { credentials: "include" });
                 if (!res.ok) throw new Error("not-auth");
             } catch {
+				const isNewSession = new URLSearchParams(window.location.search).get("new_session") === "1";
+				if (isNewSession) return;
                 const redirect = apiParam
                     ? `login.html?api=${encodeURIComponent(apiParam)}${nol ? `&nol=${encodeURIComponent(nol)}` : ""}`
                     : "login.html";
@@ -999,7 +1002,7 @@
                 localStorage.removeItem('uploadedItems');
                 localStorage.removeItem('scannedInvoices');
             } catch {}
-            window.location.href = window.location.pathname + '?new_session=1&nol=1';
+            window.location.href = window.location.pathname + '?new_session=1';
         }
         
         // ==================== SEKCIJA ZA IZVEŠTAJE ====================
