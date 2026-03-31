@@ -262,6 +262,9 @@
         const authApi = apiParam || API;
 
         // Auth check: redirect to login if not authenticated
+		// Auth check - POTPUNO ISKLJUČEN
+		// Aplikacija radi bez prijave
+		/*
         (async function checkAuth() {
             try {
                 if (nol === "1") return;
@@ -277,6 +280,7 @@
                 window.location.replace(redirect);
             }
         })();
+		*/
         let SESSION_ID = null;
         let scannedInvoices = [];
         let uploadedItems = [];
