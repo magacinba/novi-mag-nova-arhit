@@ -356,6 +356,7 @@
                     scannedInvoices.push(cleanedCode);
                     updateScannedList();
                     document.getElementById('startWaveBtn').disabled = false;
+                    startWave();
                     
                     // Kratka vibracija ako je dostupna (samo na mobilnim uređajima)
                     if (navigator.vibrate) {
